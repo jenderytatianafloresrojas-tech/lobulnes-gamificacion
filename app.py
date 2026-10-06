@@ -1,35 +1,36 @@
+
 import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime
 
-# Configuración de página estilo Gamer Arcade
+# Configuración de página estilo Gamer Arcade con icono de Joystick
 st.set_page_config(
-    page_title="LoBulnes: Hall de la Fama",
-    page_icon="🐺",
+    page_title="LoBulnes: Math Quest",
+    page_icon="🎮",
     layout="centered"
 )
 
 # ==========================================
-# ESTILOS CSS AVANZADOS (GAMING / RETRO PIXEL ART)
+# ESTILOS CSS AVANZADOS (RETRO GAMING & PIXEL ART)
 # ==========================================
 st.markdown("""
-<!-- Cargar Fuentes Retro de Google Fonts -->
+<!-- Cargar Fuentes Retro Oficiales de Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 
 <style>
-    /* Fondo general estilo noche de aventura */
+    /* Fondo estilo espacio/noche de aventura pixel art */
     .stApp {
         background: radial-gradient(circle, #2D1452 0%, #110826 100%);
         color: white;
     }
 
-    /* Cabecera Título Arcade */
+    /* Cabecera Principal Título Arcade */
     .arcade-header {
         background: #3A1C6A;
         border: 4px solid #FFE135;
         border-radius: 12px;
-        padding: 15px;
+        padding: 18px;
         text-align: center;
         box-shadow: 0 0 20px rgba(255, 225, 53, 0.4), inset 0 0 10px rgba(0,0,0,0.8);
         margin-bottom: 25px;
@@ -46,8 +47,9 @@ st.markdown("""
     .arcade-header p {
         font-family: 'VT323', monospace;
         color: #70A1FF;
-        font-size: 20px;
-        margin: 5px 0 0 0;
+        font-size: 22px;
+        margin: 8px 0 0 0;
+        letter-spacing: 1px;
     }
 
     /* Tarjetas de Explorador (Ranking) */
@@ -56,7 +58,7 @@ st.markdown("""
         border: 3px solid #70A1FF;
         border-radius: 12px;
         padding: 15px;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
         box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
@@ -67,17 +69,17 @@ st.markdown("""
         border-color: #FFE135;
     }
 
-    /* Estilo del Top 1 (Oro) */
+    /* Estilo Especial para el Líder (1° Lugar Oro) */
     .top1-card {
         border: 4px solid #FFE135 !important;
         background: linear-gradient(135deg, rgba(58, 28, 106, 0.95), rgba(75, 45, 120, 0.95));
-        box-shadow: 0 0 20px rgba(255, 225, 53, 0.5) !important;
+        box-shadow: 0 0 22px rgba(255, 225, 53, 0.5) !important;
     }
 
-    /* Tipografías dentro de la tarjeta */
+    /* Tipografías Retro */
     .card-name {
         font-family: 'Press Start 2P', cursive;
-        font-size: 13px;
+        font-size: 12px;
         color: #FFFFFF;
         text-shadow: 2px 2px #000;
     }
@@ -95,15 +97,15 @@ st.markdown("""
         text-shadow: 1px 1px #000;
     }
 
-    /* Modificación de barras de progreso de Streamlit */
+    /* Modificación Neón a las Barras de Progreso */
     .stProgress > div > div > div > div {
         background-image: linear-gradient(90deg, #2ED573 0%, #FFE135 50%, #FF4757 100%) !important;
-        box-shadow: 0 0 10px #2ED573;
+        box-shadow: 0 0 12px #2ED573;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Función para inicializar la base de datos
+# Base de datos SQLite
 def init_db():
     conn = sqlite3.connect('lobulnes_web.db')
     c = conn.cursor()
@@ -122,15 +124,15 @@ def init_db():
 
 init_db()
 
-# CABECERA VISUAL CON LOGO RETRO
+# CABECERA PRINCIPAL ARCADE SIN ÁRBOLES
 st.markdown("""
 <div class="arcade-header">
-    <h1>🌲 LOBULNES: MISSION MATH 🌲</h1>
-    <p>🐺 Hall de la Fama & Registro de Misiones 📜</p>
+    <h1>🎮 LOBULNES: MATH QUEST 🧮</h1>
+    <p>🐺 Hall de la Fama & Registro de Misiones 🏆</p>
 </div>
 """, unsafe_allow_html=True)
 
-# MENÚ LATERAL PARA ACCESO DOCENTE
+# ACCESO LATERAL PARA EL DOCENTE
 st.sidebar.title("🔐 Acceso Docente")
 modo_docente = st.sidebar.checkbox("Modo Administración")
 
@@ -142,9 +144,9 @@ if modo_docente:
     if clave_ingresada == CLAVE_CORRECTA:
         st.sidebar.success("✅ Modo Administración Activado")
         
-        tab_admin1, tab_admin2, tab_admin3 = st.tabs(["⚡ Registrar Guía", "➕ Agregar Alumnos", "⚙️️ Reiniciar Juego"])
+        tab_admin1, tab_admin2, tab_admin3 = st.tabs(["⚡ Registrar Guía", "➕ Agregar Alumnos", "⚙️ Reiniciar Juego"])
         
-        # SUB-PESTAÑA 1: REGISTRAR GUÍAS
+        # 1. PEAQUEÑA PESTAÑA: REGISTRAR GUÍA
         with tab_admin1:
             st.markdown("### ⚡ Registro de Guía (+100 EXP)")
             conn = sqlite3.connect('lobulnes_web.db')
@@ -164,7 +166,7 @@ if modo_docente:
 
                 if res:
                     guias, exp, nivel = res
-                    st.info(f"**{alumno_sel}:** Nivel {nivel} | {exp} EXP | {guias} Guías Entregadas")
+                    st.info(f"**{alumno_sel}:** Nivel {nivel} | {exp} EXP Acumulada | {guias} Guías Completadas")
 
                     if st.button("➕ Sumar +100 EXP por Guía Entregada", use_container_width=True):
                         nuevas_guias = guias + 1
@@ -183,17 +185,15 @@ if modo_docente:
                         conn.close()
 
                         st.balloons()
-                        st.success(f"🎉 ¡Guardado! {alumno_sel} tiene ahora {nueva_exp} EXP.")
+                        st.success(f"🎉 ¡Misión Registrada! {alumno_sel} acumula {nueva_exp} EXP.")
                         st.rerun()
             else:
-                st.warning("⚠️ No hay estudiantes registrados. Ve a la pestaña 'Agregar Alumnos' para ingresar la lista del curso.")
+                st.warning("⚠️ No hay estudiantes registrados. Ve a la pestaña 'Agregar Alumnos' para cargar la lista del curso.")
 
-        # SUB-PESTAÑA 2: AGREGAR ESTUDIANTES
+        # 2. PESTAÑA: AGREGAR ESTUDIANTES
         with tab_admin2:
-            st.markdown("### ➕ Cargar Lista de Estudiantes")
-            
-            st.markdown("#### Carga masiva (pegar lista del curso)")
-            lista_texto = st.text_area("Pega aquí los nombres de los alumnos (un nombre por línea):", placeholder="Camila Silva\nMateo Rossi\nSofía Henríquez")
+            st.markdown("### ➕ Cargar Lista del Curso")
+            lista_texto = st.text_area("Pega aquí los nombres de los estudiantes (un nombre por línea):", placeholder="Camila Silva\nMateo Rossi\nSofía Henríquez")
             
             if st.button("Cargar Lista Masiva"):
                 nombres = [n.strip() for n in lista_texto.split("\n") if n.strip()]
@@ -210,10 +210,10 @@ if modo_docente:
                             pass
                     conn.commit()
                     conn.close()
-                    st.success(f"🎉 Se agregaron {agregados} estudiantes a la base de datos.")
+                    st.success(f"🎉 Se agregaron {agregados} estudiantes al sistema.")
                     st.rerun()
 
-        # SUB-PESTAÑA 3: REINICIAR
+        # 3. PESTAÑA: REINICIAR Y LIMPIAR
         with tab_admin3:
             st.markdown("### ⚙️ Reiniciar Aventura")
             if st.button("💥 BORRAR TODO Y REINICIAR (Eliminar Alumnos y Puntos)"):
@@ -222,14 +222,14 @@ if modo_docente:
                 c.execute("DELETE FROM estudiantes")
                 conn.commit()
                 conn.close()
-                st.success("🔥 Base de datos borrada completamente.")
+                st.success("🔥 Base de datos borrada por completo.")
                 st.rerun()
 
     elif clave_ingresada != "":
         st.sidebar.error("❌ Clave incorrecta")
 
 # ==========================================
-# VISTA PÚBLICA / HALL DE LA FAMA (MEJORADO)
+# VISTA PÚBLICA / HALL DE LA FAMA (SOLO LECTURA)
 # ==========================================
 st.markdown("### 🏆 TABLA DE POSICIONES DE EXPLORADORES")
 
@@ -245,7 +245,6 @@ if not df_ranking.empty:
     for idx, row in df_ranking.iterrows():
         posicion = idx + 1
         
-        # Medallas e íconos especiales por posición
         if posicion == 1:
             medalla = "🥇 LÍDER"
             estilo_card = "explorer-card top1-card"
@@ -262,7 +261,6 @@ if not df_ranking.empty:
         exp_nivel = row['total_exp'] % 500
         progreso = exp_nivel / 500
 
-        # Renderizado de Tarjeta Pixel Art
         st.markdown(f"""
         <div class="{estilo_card}">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -276,9 +274,8 @@ if not df_ranking.empty:
         </div>
         """, unsafe_allow_html=True)
         
-        # Barra de EXP RPG
         st.progress(progreso)
-        st.caption(f"Progreso de Nivel: {exp_nivel} / 500 EXP")
+        st.caption(f"Progreso hacia el siguiente nivel: {exp_nivel} / 500 EXP")
         st.write("")
 else:
-    st.info("👋 ¡Bienvenidos! Próximamente el profesor registrará a los exploradores de la aventura.")
+    st.info("👋 ¡Bienvenidos a LoBulnes Math Quest! Próximamente se publicará la lista oficial de exploradores.")
