@@ -6,7 +6,7 @@ from datetime import datetime
 
 # Configuración de página estilo Gamer Arcade con icono de Joystick
 st.set_page_config(
-    page_title="LoBulnes: Math Quest",
+    page_title="Exploradores de conocimientos secretos",
     page_icon="🎮",
     layout="centered"
 )
