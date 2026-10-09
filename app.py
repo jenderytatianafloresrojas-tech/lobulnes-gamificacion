@@ -5,7 +5,7 @@ from streamlit_gsheets import GSheetsConnection
 
 # Configuración de página estilo Gamer Arcade
 st.set_page_config(
-    page_title="LoBulnes: Math Quest",
+    page_title="Exploradores de conocimientos secretos",
     page_icon="🎮",
     layout="centered"
 )
@@ -20,8 +20,35 @@ st.markdown("""
         padding: 15px; text-align: center; box-shadow: 0 0 20px rgba(255, 225, 53, 0.4);
         margin-bottom: 25px;
     }
-    .arcade-header h1 { font-family: 'Press Start 2P', cursive; color: #FFE135; font-size: 18px; margin: 0; }
+    .arcade-header h1 { font-family: 'Press Start 2P', cursive; color: #FFE135; font-size: 16px; margin: 0; line-height: 1.4; }
     .arcade-header p { font-family: 'VT323', monospace; color: #70A1FF; font-size: 20px; margin: 5px 0 0 0; }
+    
+    /* Panel de Misión Actual / Próxima Misión */
+    .mission-card {
+        background: rgba(26, 18, 52, 0.95);
+        border: 3px double #FFE135;
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 25px;
+        box-shadow: 0 0 15px rgba(255, 225, 53, 0.2);
+    }
+    .mission-title {
+        font-family: 'Press Start 2P', cursive;
+        font-size: 13px;
+        color: #FFE135;
+        margin-bottom: 12px;
+        text-shadow: 2px 2px #000;
+    }
+    .mission-item {
+        font-family: 'VT323', monospace;
+        font-size: 20px;
+        margin-bottom: 8px;
+    }
+    .mission-date {
+        color: #FF4757;
+        font-weight: bold;
+    }
+    
     .explorer-card {
         background: rgba(47, 53, 66, 0.95); border: 3px solid #70A1FF; border-radius: 12px;
         padding: 15px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
@@ -42,10 +69,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def obtener_datos_normalizados():
     try:
-        # Se especifica directamente la URL de la hoja
         df_sheet = conn.read(spreadsheet=URL_GSHEETS, ttl=0)
-        
-        # Estandarizar encabezados de columnas
         columnas_limpias = []
         for col in df_sheet.columns:
             col_str = str(col).lower().strip()
@@ -57,13 +81,20 @@ def obtener_datos_normalizados():
         st.error(f"Error al conectar con la hoja: {e}")
         return pd.DataFrame()
 
-# Cargar los datos desde la planilla
 df_estudiantes = obtener_datos_normalizados()
+
+# Variables para la información de las Misiones
+if "guia_actual" not in st.session_state:
+    st.session_state.guia_actual = "Guía N°3: Fracciones y Decimales en la Recta"
+if "fecha_limite" not in st.session_state:
+    st.session_state.fecha_limite = "Viernes 16 de Octubre - 14:00 hrs"
+if "proxima_guia" not in st.session_state:
+    st.session_state.proxima_guia = "Guía N°4: Razones y Proporciones"
 
 # Cabecera Visual
 st.markdown("""
 <div class="arcade-header">
-    <h1>🎮 LOBULNES: MATH QUEST 🧮</h1>
+    <h1>🎮 EXPLORADORES DE CONOCIMIENTOS SECRETOS 🧮</h1>
     <p>🐺 Hall de la Fama & Registro de Misiones 🏆</p>
 </div>
 """, unsafe_allow_html=True)
@@ -77,7 +108,7 @@ if modo_docente:
     clave_ingresada = st.sidebar.text_input("Ingresa la clave de profesor:", type="password")
     if clave_ingresada == CLAVE_CORRECTA:
         st.sidebar.success("✅ Modo Administración Activado")
-        tab1, tab2 = st.tabs(["⚡ Registrar Guía (+100 EXP)", "🔄 Sincronizar Lista"])
+        tab1, tab2, tab3 = st.tabs(["⚡ Registrar Guía (+100 EXP)", "📜 Configurar Misiones", "🔄 Sincronizar Lista"])
 
         with tab1:
             st.markdown("### ⚡ Registro de Guía (+100 EXP)")
@@ -108,6 +139,19 @@ if modo_docente:
                 st.warning("⚠️ No se pudieron cargar los nombres desde Google Sheets.")
 
         with tab2:
+            st.markdown("### 📜 Actualizar Información de Misiones")
+            nueva_guia = st.text_input("Guía / Misión Actual:", value=st.session_state.guia_actual)
+            nueva_fecha = st.text_input("Fecha Límite de Entrega (Máx EXP):", value=st.session_state.fecha_limite)
+            nueva_proxima = st.text_input("Próxima Guía a Trabajar:", value=st.session_state.proxima_guia)
+
+            if st.button("💾 Guardar Cambios de Misión"):
+                st.session_state.guia_actual = nueva_guia
+                st.session_state.fecha_limite = nueva_fecha
+                st.session_state.proxima_guia = nueva_proxima
+                st.success("✅ ¡Información de misiones actualizada con éxito!")
+                st.rerun()
+
+        with tab3:
             st.markdown("### 🔄 Sincronizar Lista")
             if st.button("Re-cargar alumnos desde Google Sheets"):
                 st.cache_data.clear()
@@ -115,6 +159,16 @@ if modo_docente:
 
     elif clave_ingresada != "":
         st.sidebar.error("❌ Clave incorrecta")
+
+# SECCIÓN DE INFORMACIÓN DE MISIONES PARA JUGADORES
+st.markdown(f"""
+<div class="mission-card">
+    <div class="mission-title">⚔️ MISIONES MATEMÁTICAS Y GUÍAS ⚔️</div>
+    <div class="mission-item">📜 <b>Misión Actual:</b> <span style="color: #70A1FF;">{st.session_state.guia_actual}</span></div>
+    <div class="mission-item">⏳ <b>Fecha Límite (+100 EXP):</b> <span class="mission-date">{st.session_state.fecha_limite}</span></div>
+    <div class="mission-item">🔮 <b>Próxima Misión:</b> <span style="color: #2ED573;">{st.session_state.proxima_guia}</span></div>
+</div>
+""", unsafe_allow_html=True)
 
 # VISTA PÚBLICA / HALL DE LA FAMA
 st.markdown("### 🏆 TABLA DE POSICIONES DE EXPLORADORES")
@@ -124,7 +178,6 @@ if not df_estudiantes.empty and "nombre" in df_estudiantes.columns:
     col_guias = "guias_entregadas" if "guias_entregadas" in df_estudiantes.columns else df_estudiantes.columns[2]
     col_nivel = "nivel" if "nivel" in df_estudiantes.columns else df_estudiantes.columns[4]
 
-    # Asegurar tipo de datos numérico para ordenar
     df_estudiantes[col_exp] = pd.to_numeric(df_estudiantes[col_exp], errors='coerce').fillna(0)
     df_estudiantes[col_guias] = pd.to_numeric(df_estudiantes[col_guias], errors='coerce').fillna(0)
 
