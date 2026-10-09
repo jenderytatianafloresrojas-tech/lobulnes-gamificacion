@@ -34,13 +34,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# URL directa de tu planilla en Google Sheets
+URL_GSHEETS = "https://docs.google.com/spreadsheets/d/1A5MdJZjYG8tchBIBisyW-UdgpQjWic3nLGZ9fO7cj-c/edit"
+
 # Conexión para LEER desde Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def obtener_datos_normalizados():
     try:
-        df_sheet = conn.read(ttl=0)
-        # Estandarización estricta de columnas a minúsculas y sin tildes
+        # Se especifica directamente la URL de la hoja
+        df_sheet = conn.read(spreadsheet=URL_GSHEETS, ttl=0)
+        
+        # Estandarizar encabezados de columnas
         columnas_limpias = []
         for col in df_sheet.columns:
             col_str = str(col).lower().strip()
