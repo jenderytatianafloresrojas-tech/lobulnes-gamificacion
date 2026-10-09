@@ -40,17 +40,20 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def obtener_datos_normalizados():
     try:
         df_sheet = conn.read(ttl=0)
-        # Normalizar nombres de columnas a minúsculas y sin tildes
-        df_sheet.columns = [
-            c.lower().replace("í", "i").replace("á", "a").replace("é", "e").replace("ó", "o").replace("ú", "u").strip() 
-            for c in df_sheet.columns
-        ]
+        # Estandarización estricta de columnas a minúsculas y sin tildes
+        columnas_limpias = []
+        for col in df_sheet.columns:
+            col_str = str(col).lower().strip()
+            col_str = col_str.replace("í", "i").replace("á", "a").replace("é", "e").replace("ó", "o").replace("ú", "u")
+            columnas_limpias.append(col_str)
+        df_sheet.columns = columnas_limpias
         return df_sheet
-    except Exception:
-        return pd.DataFrame(columns=["nfc_uid", "nombre", "guias_entregadas", "total_exp", "nivel", "fecha_ultimo_escaneo"])
+    except Exception as e:
+        st.error(f"Error al conectar con la hoja: {e}")
+        return pd.DataFrame()
 
-if "estudiantes_df" not in st.session_state:
-    st.session_state.estudiantes_df = obtener_datos_normalizados()
+# Cargar los datos desde la planilla
+df_estudiantes = obtener_datos_normalizados()
 
 # Cabecera Visual
 st.markdown("""
@@ -69,43 +72,40 @@ if modo_docente:
     clave_ingresada = st.sidebar.text_input("Ingresa la clave de profesor:", type="password")
     if clave_ingresada == CLAVE_CORRECTA:
         st.sidebar.success("✅ Modo Administración Activado")
-        tab1, tab2 = st.tabs(["⚡ Registrar Guía (+100 EXP)", "🔄 Sincronizar desde Google Sheets"])
+        tab1, tab2 = st.tabs(["⚡ Registrar Guía (+100 EXP)", "🔄 Sincronizar Lista"])
 
         with tab1:
             st.markdown("### ⚡ Registro de Guía (+100 EXP)")
-            df = st.session_state.estudiantes_df
-            
-            if not df.empty and "nombre" in df.columns:
-                alumno_sel = st.selectbox("Selecciona al estudiante:", df["nombre"].dropna().tolist())
-                idx = df[df["nombre"] == alumno_sel].index[0]
-                
-                exp_act = int(df.loc[idx, "total_exp"]) if pd.notnull(df.loc[idx, "total_exp"]) else 0
-                guias_act = int(df.loc[idx, "guias_entregadas"]) if pd.notnull(df.loc[idx, "guias_entregadas"]) else 0
-                lvl_act = int(df.loc[idx, "nivel"]) if pd.notnull(df.loc[idx, "nivel"]) else 1
+            if not df_estudiantes.empty and "nombre" in df_estudiantes.columns:
+                lista_nombres = df_estudiantes["nombre"].dropna().tolist()
+                alumno_sel = st.selectbox("Selecciona al estudiante:", lista_nombres)
+                idx = df_estudiantes[df_estudiantes["nombre"] == alumno_sel].index[0]
+
+                col_exp = "total_exp" if "total_exp" in df_estudiantes.columns else df_estudiantes.columns[3]
+                col_guias = "guias_entregadas" if "guias_entregadas" in df_estudiantes.columns else df_estudiantes.columns[2]
+                col_nivel = "nivel" if "nivel" in df_estudiantes.columns else df_estudiantes.columns[4]
+
+                exp_act = int(df_estudiantes.loc[idx, col_exp]) if pd.notnull(df_estudiantes.loc[idx, col_exp]) else 0
+                guias_act = int(df_estudiantes.loc[idx, col_guias]) if pd.notnull(df_estudiantes.loc[idx, col_guias]) else 0
+                lvl_act = int(df_estudiantes.loc[idx, col_nivel]) if pd.notnull(df_estudiantes.loc[idx, col_nivel]) else 1
 
                 st.info(f"**{alumno_sel}:** Nivel {lvl_act} | {exp_act} EXP | {guias_act} Guías Entregadas")
 
                 if st.button("➕ Sumar +100 EXP por Guía Entregada", use_container_width=True):
-                    nuevas_guias = guias_act + 1
-                    nueva_exp = exp_act + 100
-                    nuevo_nivel = (nueva_exp // 500) + 1
-
-                    st.session_state.estudiantes_df.loc[idx, "guias_entregadas"] = nuevas_guias
-                    st.session_state.estudiantes_df.loc[idx, "total_exp"] = nueva_exp
-                    st.session_state.estudiantes_df.loc[idx, "nivel"] = nuevo_nivel
-                    st.session_state.estudiantes_df.loc[idx, "fecha_ultimo_escaneo"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    df_estudiantes.loc[idx, col_guias] = guias_act + 1
+                    df_estudiantes.loc[idx, col_exp] = exp_act + 100
+                    df_estudiantes.loc[idx, col_nivel] = ((exp_act + 100) // 500) + 1
 
                     st.balloons()
-                    st.success(f"🎉 ¡Guardado! {alumno_sel} tiene ahora {nueva_exp} EXP.")
+                    st.success(f"🎉 ¡Guardado! {alumno_sel} tiene ahora {exp_act + 100} EXP.")
                     st.rerun()
             else:
-                st.warning("⚠️ No se encontraron alumnos. Revisa los encabezados en tu hoja de Google Sheets.")
+                st.warning("⚠️ No se pudieron cargar los nombres desde Google Sheets.")
 
         with tab2:
             st.markdown("### 🔄 Sincronizar Lista")
             if st.button("Re-cargar alumnos desde Google Sheets"):
-                st.session_state.estudiantes_df = obtener_datos_normalizados()
-                st.success("✅ Lista de alumnos sincronizada.")
+                st.cache_data.clear()
                 st.rerun()
 
     elif clave_ingresada != "":
@@ -114,19 +114,26 @@ if modo_docente:
 # VISTA PÚBLICA / HALL DE LA FAMA
 st.markdown("### 🏆 TABLA DE POSICIONES DE EXPLORADORES")
 
-df_pub = st.session_state.estudiantes_df
+if not df_estudiantes.empty and "nombre" in df_estudiantes.columns:
+    col_exp = "total_exp" if "total_exp" in df_estudiantes.columns else df_estudiantes.columns[3]
+    col_guias = "guias_entregadas" if "guias_entregadas" in df_estudiantes.columns else df_estudiantes.columns[2]
+    col_nivel = "nivel" if "nivel" in df_estudiantes.columns else df_estudiantes.columns[4]
 
-if not df_pub.empty and "nombre" in df_pub.columns:
-    df_sorted = df_pub.sort_values(by=["total_exp", "guias_entregadas"], ascending=[False, False]).reset_index(drop=True)
+    # Asegurar tipo de datos numérico para ordenar
+    df_estudiantes[col_exp] = pd.to_numeric(df_estudiantes[col_exp], errors='coerce').fillna(0)
+    df_estudiantes[col_guias] = pd.to_numeric(df_estudiantes[col_guias], errors='coerce').fillna(0)
+
+    df_sorted = df_estudiantes.sort_values(by=[col_exp, col_guias], ascending=[False, False]).reset_index(drop=True)
+
     for idx, row in df_sorted.iterrows():
         pos = idx + 1
         medalla = "🥇 LÍDER" if pos == 1 else ("🥈 2° LUGAR" if pos == 2 else ("🥉 3° LUGAR" if pos == 3 else f"#{pos}"))
         card_class = "explorer-card top1-card" if pos == 1 else "explorer-card"
-        
-        exp_act = int(row["total_exp"]) if pd.notnull(row["total_exp"]) else 0
+
+        exp_act = int(row[col_exp])
         exp_nivel = exp_act % 500
-        lvl = int(row["nivel"]) if pd.notnull(row["nivel"]) else 1
-        guias = int(row["guias_entregadas"]) if pd.notnull(row["guias_entregadas"]) else 0
+        lvl = int(row[col_nivel]) if pd.notnull(row[col_nivel]) else 1
+        guias = int(row[col_guias])
 
         st.markdown(f"""
         <div class="{card_class}">
@@ -144,4 +151,4 @@ if not df_pub.empty and "nombre" in df_pub.columns:
         st.caption(f"Progreso de Nivel: {exp_nivel} / 500 EXP")
         st.write("")
 else:
-    st.info("👋 ¡Bienvenidos! Agrega alumnos en tu archivo de Google Sheets para que aparezcan en el ranking.")
+    st.info("👋 ¡Bienvenidos! Verifica la conexión a tu hoja de cálculo para cargar los estudiantes.")
