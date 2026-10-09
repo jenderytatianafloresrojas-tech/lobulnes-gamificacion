@@ -37,13 +37,20 @@ st.markdown("""
 # Conexión para LEER desde Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Guardar estado en la sesión para persisitenia durante la clase
-if "estudiantes_df" not in st.session_state:
+def obtener_datos_normalizados():
     try:
         df_sheet = conn.read(ttl=0)
-        st.session_state.estudiantes_df = df_sheet
+        # Normalizar nombres de columnas a minúsculas y sin tildes
+        df_sheet.columns = [
+            c.lower().replace("í", "i").replace("á", "a").replace("é", "e").replace("ó", "o").replace("ú", "u").strip() 
+            for c in df_sheet.columns
+        ]
+        return df_sheet
     except Exception:
-        st.session_state.estudiantes_df = pd.DataFrame(columns=["nfc_uid", "nombre", "guias_entregadas", "total_exp", "nivel", "fecha_ultimo_escaneo"])
+        return pd.DataFrame(columns=["nfc_uid", "nombre", "guias_entregadas", "total_exp", "nivel", "fecha_ultimo_escaneo"])
+
+if "estudiantes_df" not in st.session_state:
+    st.session_state.estudiantes_df = obtener_datos_normalizados()
 
 # Cabecera Visual
 st.markdown("""
@@ -92,13 +99,13 @@ if modo_docente:
                     st.success(f"🎉 ¡Guardado! {alumno_sel} tiene ahora {nueva_exp} EXP.")
                     st.rerun()
             else:
-                st.warning("⚠️ No se encontraron alumnos. Asegúrate de tener datos en tu hoja de Google Sheets.")
+                st.warning("⚠️ No se encontraron alumnos. Revisa los encabezados en tu hoja de Google Sheets.")
 
         with tab2:
             st.markdown("### 🔄 Sincronizar Lista")
             if st.button("Re-cargar alumnos desde Google Sheets"):
-                st.session_state.estudiantes_df = conn.read(ttl=0)
-                st.success("✅ Lista de alumnos sincronizada desde la hoja de cálculo.")
+                st.session_state.estudiantes_df = obtener_datos_normalizados()
+                st.success("✅ Lista de alumnos sincronizada.")
                 st.rerun()
 
     elif clave_ingresada != "":
@@ -109,7 +116,7 @@ st.markdown("### 🏆 TABLA DE POSICIONES DE EXPLORADORES")
 
 df_pub = st.session_state.estudiantes_df
 
-if not df_pub.empty and "total_exp" in df_pub.columns:
+if not df_pub.empty and "nombre" in df_pub.columns:
     df_sorted = df_pub.sort_values(by=["total_exp", "guias_entregadas"], ascending=[False, False]).reset_index(drop=True)
     for idx, row in df_sorted.iterrows():
         pos = idx + 1
