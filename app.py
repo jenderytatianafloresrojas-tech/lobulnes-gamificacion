@@ -1,15 +1,15 @@
-             import streamlit as st
+            import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Configuración de página estilo Gamer Arcade
+# Configuración de la página
 st.set_page_config(
     page_title="Exploradores de conocimientos secretos",
     page_icon="🎮",
     layout="centered"
 )
 
-# Estilos CSS Retro Pixel Art
+# Estilos CSS Retro Arcade
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
@@ -22,7 +22,6 @@ st.markdown("""
     .arcade-header h1 { font-family: 'Press Start 2P', cursive; color: #FFE135; font-size: 16px; margin: 0; line-height: 1.4; }
     .arcade-header p { font-family: 'VT323', monospace; color: #70A1FF; font-size: 20px; margin: 5px 0 0 0; }
     
-    /* Panel de Misión Actual / Próxima Misión */
     .mission-card {
         background: rgba(26, 18, 52, 0.95);
         border: 3px double #FFE135;
@@ -38,15 +37,8 @@ st.markdown("""
         margin-bottom: 12px;
         text-shadow: 2px 2px #000;
     }
-    .mission-item {
-        font-family: 'VT323', monospace;
-        font-size: 20px;
-        margin-bottom: 8px;
-    }
-    .mission-date {
-        color: #FF4757;
-        font-weight: bold;
-    }
+    .mission-item { font-family: 'VT323', monospace; font-size: 20px; margin-bottom: 8px; }
+    .mission-date { color: #FF4757; font-weight: bold; }
     
     .explorer-card {
         background: rgba(47, 53, 66, 0.95); border: 3px solid #70A1FF; border-radius: 12px;
@@ -60,30 +52,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# URL pública directa CSV de tu hoja Google Sheets (LoBulnes_BD)
+# URL pública CSV para leer Google Sheets sin conectores complejos
 URL_CSV = "https://docs.google.com/spreadsheets/d/1A5MdJZjYG8tchBIBisyW-UdgpQjWic3nLGZ9fO7cj-c/export?format=csv"
 
-@st.cache_data(ttl=10)
-def cargar_datos_sheet():
+def obtener_estudiantes():
     try:
         df = pd.read_csv(URL_CSV)
-        # Normalizar encabezados
-        df.columns = [
-            str(c).lower().replace("í", "i").replace("á", "a").replace("é", "e").replace("ó", "o").replace("ú", "u").strip()
-            for c in df.columns
-        ]
+        # Limpiar encabezados
+        df.columns = [str(c).lower().replace("í", "i").replace("á", "a").replace("é", "e").replace("ó", "o").replace("ú", "u").strip() for c in df.columns]
         return df
     except Exception as e:
-        st.error(f"Error al leer la hoja de cálculo: {e}")
+        st.error(f"Error cargando hoja: {e}")
         return pd.DataFrame()
 
-# Carga de datos
+# Inicializar estado en sesión
 if "df_estudiantes" not in st.session_state or st.session_state.df_estudiantes.empty:
-    st.session_state.df_estudiantes = cargar_datos_sheet()
+    st.session_state.df_estudiantes = obtener_estudiantes()
 
 df_estudiantes = st.session_state.df_estudiantes
 
-# Variables para la información de las Misiones
 if "guia_actual" not in st.session_state:
     st.session_state.guia_actual = "Guía N°3: Fracciones y Decimales en la Recta"
 if "fecha_limite" not in st.session_state:
@@ -91,7 +78,7 @@ if "fecha_limite" not in st.session_state:
 if "proxima_guia" not in st.session_state:
     st.session_state.proxima_guia = "Guía N°4: Razones y Proporciones"
 
-# Cabecera Visual
+# Encabezado
 st.markdown("""
 <div class="arcade-header">
     <h1>🎮 EXPLORADORES DE CONOCIMIENTOS SECRETOS 🧮</h1>
@@ -99,7 +86,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Menú lateral para acceso del Docente
+# Acceso Docente
 st.sidebar.title("🔐 Acceso Docente")
 modo_docente = st.sidebar.checkbox("Modo Administración")
 CLAVE_CORRECTA = "lobulnes2026"
@@ -140,33 +127,32 @@ if modo_docente:
                     st.success(f"🎉 ¡Guardado! {alumno_sel} tiene ahora {nueva_exp} EXP.")
                     st.rerun()
             else:
-                st.warning("⚠️ No se pudieron cargar los nombres desde Google Sheets.")
+                st.warning("⚠️ No se pudieron cargar los alumnos.")
 
         with tab2:
             st.markdown("### 📜 Actualizar Información de Misiones")
             nueva_guia = st.text_input("Guía / Misión Actual:", value=st.session_state.guia_actual)
-            nueva_fecha = st.text_input("Fecha Límite de Entrega (Máx EXP):", value=st.session_state.fecha_limite)
-            nueva_proxima = st.text_input("Próxima Guía a Trabajar:", value=st.session_state.proxima_guia)
+            nueva_fecha = st.text_input("Fecha Límite (Máx EXP):", value=st.session_state.fecha_limite)
+            nueva_proxima = st.text_input("Próxima Guía:", value=st.session_state.proxima_guia)
 
-            if st.button("💾 Guardar Cambios de Misión"):
+            if st.button("💾 Guardar Cambios"):
                 st.session_state.guia_actual = nueva_guia
                 st.session_state.fecha_limite = nueva_fecha
                 st.session_state.proxima_guia = nueva_proxima
-                st.success("✅ ¡Información de misiones actualizada con éxito!")
+                st.success("✅ Misiones actualizadas.")
                 st.rerun()
 
         with tab3:
-            st.markdown("### 🔄 Sincronizar Lista")
-            if st.button("Re-cargar alumnos desde Google Sheets"):
-                st.cache_data.clear()
-                st.session_state.df_estudiantes = cargar_datos_sheet()
-                st.success("✅ Datos sincronizados con éxito.")
+            st.markdown("### 🔄 Sincronizar")
+            if st.button("Re-cargar alumnos"):
+                st.session_state.df_estudiantes = obtener_estudiantes()
+                st.success("✅ Lista re-cargada.")
                 st.rerun()
 
     elif clave_ingresada != "":
         st.sidebar.error("❌ Clave incorrecta")
 
-# SECCIÓN DE INFORMACIÓN DE MISIONES PARA JUGADORES
+# Misiones
 st.markdown(f"""
 <div class="mission-card">
     <div class="mission-title">⚔️ MISIONES MATEMÁTICAS Y GUÍAS ⚔️</div>
@@ -176,7 +162,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# VISTA PÚBLICA / HALL DE LA FAMA
+# Hall de la Fama
 st.markdown("### 🏆 TABLA DE POSICIONES DE EXPLORADORES")
 
 if not df_estudiantes.empty and "nombre" in df_estudiantes.columns:
@@ -215,4 +201,4 @@ if not df_estudiantes.empty and "nombre" in df_estudiantes.columns:
         st.caption(f"Progreso de Nivel: {exp_nivel} / 500 EXP")
         st.write("")
 else:
-    st.info("👋 ¡Bienvenidos! Carga la lista de estudiantes desde tu archivo de Google Sheets.")
+    st.info("👋 Cargando estudiantes...")
