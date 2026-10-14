@@ -1,7 +1,6 @@
-import streamlit as st
+             import streamlit as st
 import pandas as pd
 from datetime import datetime
-from streamlit_gsheets import GSheetsConnection
 
 # Configuración de página estilo Gamer Arcade
 st.set_page_config(
@@ -61,27 +60,28 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# URL directa de tu planilla en Google Sheets
-URL_GSHEETS = "https://docs.google.com/spreadsheets/d/1A5MdJZjYG8tchBIBisyW-UdgpQjWic3nLGZ9fO7cj-c/edit"
+# URL pública directa CSV de tu hoja Google Sheets (LoBulnes_BD)
+URL_CSV = "https://docs.google.com/spreadsheets/d/1A5MdJZjYG8tchBIBisyW-UdgpQjWic3nLGZ9fO7cj-c/export?format=csv"
 
-# Conexión para LEER desde Google Sheets
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-def obtener_datos_normalizados():
+@st.cache_data(ttl=10)
+def cargar_datos_sheet():
     try:
-        df_sheet = conn.read(spreadsheet=URL_GSHEETS, ttl=0)
-        columnas_limpias = []
-        for col in df_sheet.columns:
-            col_str = str(col).lower().strip()
-            col_str = col_str.replace("í", "i").replace("á", "a").replace("é", "e").replace("ó", "o").replace("ú", "u")
-            columnas_limpias.append(col_str)
-        df_sheet.columns = columnas_limpias
-        return df_sheet
+        df = pd.read_csv(URL_CSV)
+        # Normalizar encabezados
+        df.columns = [
+            str(c).lower().replace("í", "i").replace("á", "a").replace("é", "e").replace("ó", "o").replace("ú", "u").strip()
+            for c in df.columns
+        ]
+        return df
     except Exception as e:
-        st.error(f"Error al conectar con la hoja: {e}")
+        st.error(f"Error al leer la hoja de cálculo: {e}")
         return pd.DataFrame()
 
-df_estudiantes = obtener_datos_normalizados()
+# Carga de datos
+if "df_estudiantes" not in st.session_state or st.session_state.df_estudiantes.empty:
+    st.session_state.df_estudiantes = cargar_datos_sheet()
+
+df_estudiantes = st.session_state.df_estudiantes
 
 # Variables para la información de las Misiones
 if "guia_actual" not in st.session_state:
@@ -128,12 +128,16 @@ if modo_docente:
                 st.info(f"**{alumno_sel}:** Nivel {lvl_act} | {exp_act} EXP | {guias_act} Guías Entregadas")
 
                 if st.button("➕ Sumar +100 EXP por Guía Entregada", use_container_width=True):
-                    df_estudiantes.loc[idx, col_guias] = guias_act + 1
-                    df_estudiantes.loc[idx, col_exp] = exp_act + 100
-                    df_estudiantes.loc[idx, col_nivel] = ((exp_act + 100) // 500) + 1
+                    nuevas_guias = guias_act + 1
+                    nueva_exp = exp_act + 100
+                    nuevo_nivel = (nueva_exp // 500) + 1
+
+                    st.session_state.df_estudiantes.loc[idx, col_guias] = nuevas_guias
+                    st.session_state.df_estudiantes.loc[idx, col_exp] = nueva_exp
+                    st.session_state.df_estudiantes.loc[idx, col_nivel] = nuevo_nivel
 
                     st.balloons()
-                    st.success(f"🎉 ¡Guardado! {alumno_sel} tiene ahora {exp_act + 100} EXP.")
+                    st.success(f"🎉 ¡Guardado! {alumno_sel} tiene ahora {nueva_exp} EXP.")
                     st.rerun()
             else:
                 st.warning("⚠️ No se pudieron cargar los nombres desde Google Sheets.")
@@ -155,6 +159,8 @@ if modo_docente:
             st.markdown("### 🔄 Sincronizar Lista")
             if st.button("Re-cargar alumnos desde Google Sheets"):
                 st.cache_data.clear()
+                st.session_state.df_estudiantes = cargar_datos_sheet()
+                st.success("✅ Datos sincronizados con éxito.")
                 st.rerun()
 
     elif clave_ingresada != "":
@@ -209,4 +215,4 @@ if not df_estudiantes.empty and "nombre" in df_estudiantes.columns:
         st.caption(f"Progreso de Nivel: {exp_nivel} / 500 EXP")
         st.write("")
 else:
-    st.info("👋 ¡Bienvenidos! Verifica la conexión a tu hoja de cálculo para cargar los estudiantes.")
+    st.info("👋 ¡Bienvenidos! Carga la lista de estudiantes desde tu archivo de Google Sheets.")
